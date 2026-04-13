@@ -1,6 +1,7 @@
 package com.hl.snoozeloo.ui.youralarmscreen
 
 
+import android.R.attr.action
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -53,16 +54,19 @@ import com.hl.snoozeloo.ui.theme.cardBackground
 import kotlinx.coroutines.launch
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.hl.snoozeloo.R
-import com.hl.snoozeloo.domain.YourAlarmState
+import com.hl.snoozeloo.domain.AlarmDetails
+import com.hl.snoozeloo.ui.AppViewModelProvider
 import com.hl.snoozeloo.ui.SplashScreenRoot
+import com.hl.snoozeloo.ui.addeditalarmscreen.AddEditAlarmScreenViewModel
+import kotlinx.coroutines.CoroutineScope
 import java.time.LocalTime
 
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun YourAlarmScreenRoot(modifier: Modifier = Modifier) {
-
-
+fun YourAlarmScreenRoot(
+    modifier: Modifier = Modifier,
+    vm: YourAlarmsScreenViewModel = viewModel(factory = AppViewModelProvider.Factory) // Temporary for Testing. To Delete
+) {
     val snackBarState = remember {
         SnackbarHostState()
     }
@@ -70,123 +74,137 @@ fun YourAlarmScreenRoot(modifier: Modifier = Modifier) {
     val scope = rememberCoroutineScope()
 
 
-    val vm = viewModel<YourAlarmsScreenViewModel>()
+    //val vm = viewModel<YourAlarmsScreenViewModel>()
     val state by vm.uiState.collectAsStateWithLifecycle()
     val action = vm::onAction
 
     if (state.isLoading) {
-        SplashScreenRoot()
+        //SplashScreenRoot()
+        YourAlarmScreen(
+            modifier = modifier,
+            snackBarState = snackBarState,
+            scope = scope,
+            state = state,
+            onAction = action
+        )
     } else {
-        Scaffold(
-            modifier = modifier.padding(top = 16.dp),
-            topBar = {
-                TopAppBar(
-                    title = {
-                        Text(
-                            text = "Your Alarms",
-                            color = Color.Black,
-                            fontSize = 24.sp,
-                            fontWeight = FontWeight.Normal
-                        )
-                    }
-                )
-            },
-            floatingActionButton = {
-                FloatingActionButton(
-                    onClick = {
-                        scope.launch {
-                            snackBarState.showSnackbar(
-                                message = "Clicked FAB"
-                            )
-                        }
-                    },
-                    shape = CircleShape,
-                    containerColor = backgroundColor,
-                    contentColor = Color.White
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = null,
-                        )
-                }
-            },
-            floatingActionButtonPosition = FabPosition.Center
-        ) { paddingValues ->
-            YourAlarmScreen(
-                modifier = Modifier
-                    .padding(paddingValues),
-                state = state,
-                onAction = action
-            )
-        }
+        YourAlarmScreen(
+            modifier = modifier,
+            snackBarState = snackBarState,
+            scope = scope,
+            state = state,
+            onAction = action
+        )
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun YourAlarmScreen(
     modifier: Modifier = Modifier,
+    snackBarState: SnackbarHostState,
+    scope: CoroutineScope,
     state: YourAlarmUiState,
     onAction: (YourAlarmsScreenAction) -> Unit
 ) {
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(color = alarmBackground)
-    ) {
-        when {
-            state.alarms.isEmpty() -> {
-                //EmptyScreen()
-                // Best Practice: Use LazyColumn for lists
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(color = alarmBackground),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    // In a real app, this would be: items(alarms) { alarm -> AlarmCard(alarm) }
-                    item { AlarmCard(alarms =
-                            YourAlarmState(
-                                time = LocalTime.of(10, 0),
-                                alarmTitle = "Wake Up",
-                                isEnabled = true,
-                    )) }
-                    item { AlarmCard(alarms =
-                        YourAlarmState(
-                            time = LocalTime.of(16, 0),
-                            alarmTitle = "Education",
-                            isEnabled = true,
-                        )) }
-                    item { AlarmCard(alarms =
-                        YourAlarmState(
-                            time = LocalTime.of(18, 0),
-                            alarmTitle = "Dinner",
-                            isEnabled = false,
-                        )) }
-
+    Scaffold(
+        modifier = modifier.padding(top = 16.dp),
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        text = "Your Alarms",
+                        color = Color.Black,
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Normal
+                    )
                 }
+            )
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = {
+                    scope.launch {
+                        snackBarState.showSnackbar(
+                            message = "Clicked FAB"
+                        )
+                    }
+                },
+                shape = CircleShape,
+                containerColor = backgroundColor,
+                contentColor = Color.White
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = null,
+                )
             }
-            else -> {
-                // Best Practice: Use LazyColumn for lists
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(color = alarmBackground),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    // In a real app, this would be: items(alarms) { alarm -> AlarmCard(alarm) }
-                    items(state.alarms) { alarm ->
-                        AlarmCard(alarms = alarm)
+        },
+        floatingActionButtonPosition = FabPosition.Center
+    ) { paddingValues ->
+        Box(
+            modifier = modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .background(color = alarmBackground)
+        ) {
+            when {
+                state.alarms.isEmpty() -> {
+                    EmptyScreen()
+
+                    // For Testing Only. To Delete.
+//                    LazyColumn(
+//                        modifier = Modifier
+//                            .fillMaxSize()
+//                            .background(color = alarmBackground),
+//                        contentPadding = PaddingValues(16.dp),
+//                        verticalArrangement = Arrangement.spacedBy(12.dp)
+//                    ) {
+//                        // In a real app, this would be: items(alarms) { alarm -> AlarmCard(alarm) }
+//                        item { AlarmCard(alarms =
+//                            AlarmDetails(
+//                                time = LocalTime.of(10, 0),
+//                                alarmTitle = "Wake Up",
+//                                isEnabled = true,
+//                            )) }
+//                        item { AlarmCard(alarms =
+//                            AlarmDetails(
+//                                time = LocalTime.of(16, 0),
+//                                alarmTitle = "Education",
+//                                isEnabled = true,
+//                            )) }
+//                        item { AlarmCard(alarms =
+//                            AlarmDetails(
+//                                time = LocalTime.of(18, 0),
+//                                alarmTitle = "Dinner",
+//                                isEnabled = false,
+//                            )) }
+//
+//                    }
+                }
+                else -> {
+                    // Best Practice: Use LazyColumn for lists
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(color = alarmBackground),
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        // In a real app, this would be: items(alarms) { alarm -> AlarmCard(alarm) }
+                        items(state.alarms) { alarm ->
+                            AlarmCard(alarms = alarm)
 //                    item { AlarmCard() }
 //                    item { AlarmCard() }
 //                    item { AlarmCard() }
 //                    item { AlarmCard() }
+                        }
                     }
                 }
             }
         }
     }
+
 }
 
 @Composable
@@ -217,7 +235,7 @@ private fun EmptyScreen(modifier: Modifier = Modifier) {
 @Composable
 private fun AlarmCard(
     modifier: Modifier = Modifier,
-    alarms: YourAlarmState
+    alarms: AlarmDetails
 ) {
     Row(
         modifier = modifier
@@ -242,7 +260,7 @@ private fun AlarmCard(
 }
 
 @Composable
-private fun AlarmOnOffButton(modifier: Modifier = Modifier, alarms: YourAlarmState) {
+private fun AlarmOnOffButton(modifier: Modifier = Modifier, alarms: AlarmDetails) {
 
     Switch(
         modifier = modifier,
@@ -297,7 +315,7 @@ private fun AlarmAMPMDisplay(modifier: Modifier = Modifier, text: String) {
 }
 
 @Composable
-private fun AlarmCountdownDisplay(modifier: Modifier = Modifier, alarms: YourAlarmState) {
+private fun AlarmCountdownDisplay(modifier: Modifier = Modifier, alarms: AlarmDetails) {
     Text(
         modifier = modifier,
         text = "${alarms.timeLeftDescription}",
