@@ -7,8 +7,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
 class OfflineAlarmRepository(
-    //private val alarmDao: AlarmDao
-    override val alarmDao: AlarmDao // Temporary to be deleted after testing.
+    private val alarmDao: AlarmDao
 ) : AlarmRepository {
     override fun getAllAlarmsStream(): Flow<List<AlarmDetails>> {
         return alarmDao.getAllAlarms().map { entities ->
@@ -16,8 +15,9 @@ class OfflineAlarmRepository(
         }
     }
 
-    override fun getAlarmStream(id: Int): Flow<AlarmDetails?> {
-        return alarmDao.getAlarmById(id).map { it?.toDomain() }
+    override suspend fun getAlarmById(id: Int): AlarmDetails? {
+        val entity = alarmDao.getAlarmById(id)
+        return entity?.toDomain()
     }
 
     override suspend fun insertAlarm(alarm: AlarmDetails) {
@@ -30,6 +30,10 @@ class OfflineAlarmRepository(
 
     override suspend fun updateAlarm(alarm: AlarmDetails) {
         alarmDao.updateAlarm(alarm.toEntity())
+    }
+
+    override suspend fun deleteAllAlarms() {
+        alarmDao.deleteAllAlarms()
     }
 
 }

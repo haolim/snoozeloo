@@ -7,4 +7,5 @@ sealed interface AddEditAlarmScreenAction {
     data class onHourChange(val newHour: String): AddEditAlarmScreenAction
 
     data class onMinuteChange(val newMinute: String): AddEditAlarmScreenAction
+
 }

@@ -3,28 +3,57 @@ package com.hl.snoozeloo.ui.addeditalarmscreen
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.hl.snoozeloo.data.local.AlarmRepository
 import com.hl.snoozeloo.domain.AlarmDetails
+import com.hl.snoozeloo.domain.DeleteAllAlarmsUseCase
+import com.hl.snoozeloo.domain.GetAlarmByIdUseCase
 import com.hl.snoozeloo.domain.SaveAlarmUseCase
 import com.hl.snoozeloo.ui.youralarmscreen.YourAlarmUiState
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalTime
 
 
 class AddEditAlarmScreenViewModel(
-    //private val alarmRepository: AlarmRepository // To delete
-    private val saveAlarmUseCase: SaveAlarmUseCase
+    private val saveAlarmUseCase: SaveAlarmUseCase,
+    private val getAlarmByIdUseCase: GetAlarmByIdUseCase,
+    savedStateHandle: SavedStateHandle,
 ): ViewModel() {
+
+    private val alarmId: Int? = savedStateHandle.get<Int>("alarmId")
 
     private val _uiState = MutableStateFlow(AddEditAlarmUiState())
     val uiState: StateFlow<AddEditAlarmUiState> = _uiState.asStateFlow()
 
+    init {
+        alarmId?.let { id ->
+            loadExistingAlarm(id)
+        }
+    }
+    private fun loadExistingAlarm(id: Int) {
+        viewModelScope.launch {
+            val alarm = getAlarmByIdUseCase(id)
+            alarm?.let { alarmDetails ->
+                _uiState.update { it.copy(
+                    hourInput = alarmDetails.time.hour.toString().padStart(2, '0'),
+                    minuteInput = alarmDetails.time.minute.toString().padStart(2, '0'),
+                    alarmDetails = alarmDetails
+                )
+
+                }
+            }
+        }
+    }
     fun updateUiState(newDetails: AlarmDetails) {
         _uiState.update {
             it.copy(
@@ -49,6 +78,9 @@ class AddEditAlarmScreenViewModel(
         }
     }
 
+
+
+
     private fun updateTime(
         newHour: String? = null,
         newMinute: String? = null
@@ -71,19 +103,23 @@ class AddEditAlarmScreenViewModel(
         }
     }
 
-
-
     private suspend fun saveAlarm() {
         // Pull AlarmDetails from Domain Model out of the UI State
         // and send it to the Repository
 
-        _uiState.update { it.copy(isSaving = true) }
+      //  if (_uiState.value.isSaving) return
+
+        _uiState.update { it.copy(isSaving = true, errorMessage = null) }
         try {
             val alarmToSave = _uiState.value.alarmDetails
             saveAlarmUseCase(alarmToSave)
-            _uiState.update { it.copy(isSaving = false, isSaveSuccess = true)}
+            _uiState.update { it.copy(isSaveSuccess = true)}
         } catch (e: Exception) {
-            _uiState.update { it.copy(isSaving = false, errorMessage = e.message)}
+            _uiState.update { it.copy(isSaving = false, errorMessage = "Error saving alarm. Try again.")}
         }
+//        finally {
+//            _uiState.update { it.copy(isSaving = false) }
+//        }
+
     }
 }

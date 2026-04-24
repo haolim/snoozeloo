@@ -13,12 +13,6 @@ fun LocalTime.toUserFriendlyStringHHMM(): String {
 }
 
 fun LocalTime.timeLeftUntil(alarmTime: LocalTime): String {
-//    val duration = java.time.Duration.between(this, alarmTime)
-//
-//    val days = duration.toDays()
-//    val hours = duration.toHours() % 24
-//    val minutes = duration.toMinutes() % 60
-
     var secondsDiff = java.time.Duration.between(this, alarmTime).seconds
 
     if (secondsDiff < 0) {
