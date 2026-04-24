@@ -1,5 +1,6 @@
 package com.hl.snoozeloo.ui.addeditalarmscreen
 
+import android.R
 import android.R.attr.height
 import android.R.attr.onClick
 import androidx.compose.foundation.background
@@ -7,6 +8,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -34,8 +36,12 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldColors
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -64,19 +70,30 @@ import com.hl.snoozeloo.ui.theme.closeButton
 
 @Composable
 fun AddEditAlarmScreenRoot(
+    alarmId: Int? = null,
+    onBackClicked: () -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: AddEditAlarmScreenViewModel = viewModel(factory = AppViewModelProvider.Factory)
+    viewModel: AddEditAlarmScreenViewModel = viewModel(factory = AppViewModelProvider.Factory),
 ) {
-    val viewModel = viewModel<AddEditAlarmScreenViewModel>()
+    //val viewModel = viewModel<AddEditAlarmScreenViewModel>()
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val focusManager = LocalFocusManager.current
     val action = viewModel::onAction
+
+
+    LaunchedEffect(state.isSaveSuccess) {
+        if (state.isSaveSuccess) {
+            onBackClicked()
+        }
+    }
 
     AddEditAlarmScreen(
         modifier = modifier,
         state = state,
         //focusManager = focusManager,
-        onAction = action
+        onAction = action,
+        onBackClicked = onBackClicked,
+        alarmId = alarmId
     )
 }
 
@@ -86,7 +103,9 @@ fun AddEditAlarmScreen(
     modifier: Modifier = Modifier,
     state: AddEditAlarmUiState,
     //focusManager: FocusManager,
-    onAction: (AddEditAlarmScreenAction) -> Unit
+    onAction: (AddEditAlarmScreenAction) -> Unit,
+    onBackClicked: () -> Unit,
+    alarmId: Int? = null
 ) {
         Scaffold { innerPadding ->
             Column(
@@ -98,14 +117,19 @@ fun AddEditAlarmScreen(
                 TopRowCloseAndSave(
                     modifier = Modifier,
                     state = state,
-                    onAction = onAction
+                    onAction = onAction,
+                    onBackClicked = onBackClicked
                 )
                 HourAndMinuteRow(
                     modifier = Modifier,
                     state = state,
-                    onAction = onAction
+                    onAction = onAction,
+                    alarmId = alarmId
                 )
+                Spacer(modifier = Modifier.padding(16.dp))
+                AlarmName()
         }
+
     }
 }
 
@@ -113,7 +137,8 @@ fun AddEditAlarmScreen(
 private fun TopRowCloseAndSave(
     modifier: Modifier = Modifier,
     state: AddEditAlarmUiState,
-    onAction: (AddEditAlarmScreenAction) -> Unit
+    onAction: (AddEditAlarmScreenAction) -> Unit,
+    onBackClicked: () -> Unit
 ) {
     Row(modifier = modifier
         .fillMaxWidth()
@@ -125,7 +150,7 @@ private fun TopRowCloseAndSave(
                 .clip(RoundedCornerShape(8.dp))
                 .background(closeButton)
                 .size(32.dp, 32.dp),
-            onClick = {},
+            onClick = onBackClicked,
             colors = IconButtonColors(
                 containerColor = closeButton,
                 disabledContentColor = Color.White,
@@ -151,7 +176,7 @@ private fun TopRowCloseAndSave(
             onClick = {
                 onAction(AddEditAlarmScreenAction.onSaveClick)
             },
-            enabled = state.isSaveEnabled
+            enabled = !state.isSaving
         ) {
             Text(
                 text = "Save",
@@ -165,12 +190,15 @@ private fun TopRowCloseAndSave(
 private fun HourAndMinuteRow(
     modifier: Modifier = Modifier,
     state: AddEditAlarmUiState,
-    onAction: (AddEditAlarmScreenAction) -> Unit
+    onAction: (AddEditAlarmScreenAction) -> Unit,
+    alarmId: Int? = null
 ) {
     Row(modifier = modifier
         .fillMaxWidth()
-        .padding(start = 16.dp, end = 16.dp)
-        .background(Color.White),
+        .padding(horizontal = 16.dp)
+        .clip(shape = RoundedCornerShape(16.dp))
+        .background(Color.White)
+        .padding(vertical = 12.dp, horizontal = 16.dp),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -178,7 +206,7 @@ private fun HourAndMinuteRow(
             modifier = modifier.padding(16.dp),
             value = state.hourInput,
             onValueChange = {newValue ->
-               onAction(AddEditAlarmScreenAction.onHourChange(newValue))
+                onAction(AddEditAlarmScreenAction.onHourChange(newValue))
             }
         )
         Text(
@@ -194,10 +222,7 @@ private fun HourAndMinuteRow(
             }
         )
     }
-
-
 }
-
 @Composable
 private fun HourCard(
     modifier: Modifier = Modifier,
@@ -266,13 +291,62 @@ private fun MinuteCard(
     )
 }
 
+@Composable
+private fun AlarmName(modifier: Modifier = Modifier) {
+    Row(modifier = modifier
+        .fillMaxWidth()
+        .padding(start = 16.dp, end = 16.dp)
+        .clip(shape = RoundedCornerShape(16.dp))
+        .background(Color.White),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically) {
+        OutlinedTextField(
+            value = "Alarm Name",
+            onValueChange = {},
+//            modifier = Modifier
+//                .fillMaxWidth(),
+            colors = TextFieldDefaults.colors(
+                focusedContainerColor = Color.White,
+                unfocusedContainerColor = Color.White,
+                disabledContainerColor = Color.White,
+                errorContainerColor = Color.White,
+                unfocusedIndicatorColor = Color.Transparent,
+                errorIndicatorColor = Color.Transparent,
+                focusedIndicatorColor = Color.Transparent,
+                disabledIndicatorColor = Color.Transparent
+            )
+        )
+        OutlinedTextField(
+            value = "Work",
+            onValueChange = {},
+//            modifier = Modifier
+//                .fillMaxWidth(),
+            colors = TextFieldDefaults.colors(
+                errorTextColor = alarmInText,
+                focusedTextColor = alarmInText,
+                disabledTextColor = alarmInText,
+                unfocusedTextColor = alarmInText,
+                focusedContainerColor = Color.White,
+                unfocusedContainerColor = Color.White,
+                disabledContainerColor = Color.White,
+                errorContainerColor = Color.White,
+                unfocusedIndicatorColor = Color.Transparent,
+                errorIndicatorColor = Color.Transparent,
+                focusedIndicatorColor = Color.Transparent,
+                disabledIndicatorColor = Color.Transparent
+            )
+        )
+    }
+}
+
 @Preview
 @Composable
 private fun AddEditAlarmScreenPreview() {
     SnoozelooTheme() {
         AddEditAlarmScreen(
             state = AddEditAlarmUiState(),
-            onAction = { }
+            onAction = { },
+            onBackClicked = { }
         )
     }
 }

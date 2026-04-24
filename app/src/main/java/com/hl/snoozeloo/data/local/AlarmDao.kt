@@ -6,6 +6,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
+import com.hl.snoozeloo.domain.AlarmDetails
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -24,12 +25,14 @@ interface AlarmDao {
     @Delete
     suspend fun deleteAlarm(alarm: AlarmEntity)
 
+    @Query("SELECT * FROM alarms where id = :id")
+    suspend fun getAlarmById(id: Int): AlarmEntity?
+
     /*
     Because of the Flow return type, Room also runs the query on the background thread.
     You don't need to explicitly make it a suspend function and call it inside a coroutine scope.
      */
-    @Query("SELECT * FROM alarms where id = :id")
-    fun getAlarmById(id: Int): Flow<AlarmEntity>
+
 
     @Query("SELECT * FROM alarms ORDER BY id ASC")
     fun getAllAlarms(): Flow<List<AlarmEntity>>

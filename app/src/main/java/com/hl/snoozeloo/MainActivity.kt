@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.hl.snoozeloo.data.local.AlarmRepository
+import com.hl.snoozeloo.navigation.AppNavGraph
 import com.hl.snoozeloo.ui.addeditalarmscreen.AddEditAlarmScreenRoot
 import com.hl.snoozeloo.ui.youralarmscreen.YourAlarmScreenRoot
 import com.hl.snoozeloo.ui.theme.SnoozelooTheme
@@ -29,12 +30,13 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             SnoozelooTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-//                    YourAlarmScreenRoot(modifier = Modifier
+             //   Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+                    AppNavGraph()
+//                   YourAlarmScreenRoot(modifier = Modifier
 //                        .padding(innerPadding))
-                    AddEditAlarmScreenRoot(modifier = Modifier
-                        .padding(innerPadding))
-                }
+//                    AddEditAlarmScreenRoot(modifier = Modifier
+//                        .padding(innerPadding))
+//                }
             }
         }
     }

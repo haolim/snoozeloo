@@ -6,8 +6,7 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 
 /*
-TODO: implement DI using either Koin or kotlin-inject
-TODO: implement Migration
+TODO: implement DI using Koin
  */
 @Database(
     entities = [AlarmEntity::class],

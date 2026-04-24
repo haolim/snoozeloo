@@ -17,11 +17,5 @@ class AlarmApplication : Application() {
         super.onCreate()
         container = AppDataContainer(this)
 
-        /*
-        Temporary for Testing only. To clear the database on each app launch. To be Deleted.
-         */
-        CoroutineScope(Dispatchers.IO).launch {
-            container.alarmRepository.clearAllAlarms()
-        }
     }
 }

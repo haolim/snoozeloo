@@ -4,6 +4,7 @@ package com.hl.snoozeloo.ui.youralarmscreen
 import android.R.attr.action
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,12 +27,14 @@ import androidx.compose.material3.FabPosition
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -55,16 +58,20 @@ import kotlinx.coroutines.launch
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.hl.snoozeloo.R
 import com.hl.snoozeloo.domain.AlarmDetails
+import com.hl.snoozeloo.ui.AlarmsUiEvents
 import com.hl.snoozeloo.ui.AppViewModelProvider
 import com.hl.snoozeloo.ui.SplashScreenRoot
 import com.hl.snoozeloo.ui.addeditalarmscreen.AddEditAlarmScreenViewModel
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.serialization.Serializable
 import java.time.LocalTime
 
 
 @Composable
 fun YourAlarmScreenRoot(
     modifier: Modifier = Modifier,
+    onAddAlarmClicked: () -> Unit,
+    onEditAlarmClicked: (Int) -> Unit,
     vm: YourAlarmsScreenViewModel = viewModel(factory = AppViewModelProvider.Factory) // Temporary for Testing. To Delete
 ) {
     val snackBarState = remember {
@@ -73,10 +80,18 @@ fun YourAlarmScreenRoot(
 
     val scope = rememberCoroutineScope()
 
-
-    //val vm = viewModel<YourAlarmsScreenViewModel>()
     val state by vm.uiState.collectAsStateWithLifecycle()
-    val action = vm::onAction
+
+    // Channel - 4 - Listen to the event stream
+    LaunchedEffect(Unit) {
+        vm.eventFlow.collect { event ->
+            when (event) {
+                is AlarmsUiEvents.ShowSnackBar -> {
+                    snackBarState.showSnackbar(event.message)
+                }
+            }
+        }
+    }
 
     if (state.isLoading) {
         //SplashScreenRoot()
@@ -85,7 +100,17 @@ fun YourAlarmScreenRoot(
             snackBarState = snackBarState,
             scope = scope,
             state = state,
-            onAction = action
+            onAction = { action ->
+                when(action) {
+                    is YourAlarmsScreenAction.addAlarmClicked -> {
+                        onAddAlarmClicked()
+                    }
+                    is YourAlarmsScreenAction.onAlarmClicked -> {
+                        onEditAlarmClicked(action.id)
+                    }
+                    else -> vm.onAction(action)
+                }
+            }
         )
     } else {
         YourAlarmScreen(
@@ -93,7 +118,17 @@ fun YourAlarmScreenRoot(
             snackBarState = snackBarState,
             scope = scope,
             state = state,
-            onAction = action
+            onAction = { action ->
+                when(action) {
+                    is YourAlarmsScreenAction.addAlarmClicked -> {
+                        onAddAlarmClicked()
+                    }
+                    is YourAlarmsScreenAction.onAlarmClicked -> {
+                        onEditAlarmClicked(action.id)
+                    }
+                    else -> vm.onAction(action)
+                }
+            }
         )
     }
 }
@@ -105,7 +140,7 @@ fun YourAlarmScreen(
     snackBarState: SnackbarHostState,
     scope: CoroutineScope,
     state: YourAlarmUiState,
-    onAction: (YourAlarmsScreenAction) -> Unit
+    onAction: (YourAlarmsScreenAction) -> Unit,
 ) {
     Scaffold(
         modifier = modifier.padding(top = 16.dp),
@@ -124,12 +159,15 @@ fun YourAlarmScreen(
         floatingActionButton = {
             FloatingActionButton(
                 onClick = {
-                    scope.launch {
-                        snackBarState.showSnackbar(
-                            message = "Clicked FAB"
-                        )
-                    }
+                    onAction(YourAlarmsScreenAction.addAlarmClicked)
                 },
+//                    {
+//                    scope.launch {
+//                        snackBarState.showSnackbar(
+//                            message = "Clicked FAB"
+//                        )
+//                    }
+//                },
                 shape = CircleShape,
                 containerColor = backgroundColor,
                 contentColor = Color.White
@@ -140,7 +178,8 @@ fun YourAlarmScreen(
                 )
             }
         },
-        floatingActionButtonPosition = FabPosition.Center
+        floatingActionButtonPosition = FabPosition.Center,
+        snackbarHost = { SnackbarHost(hostState = snackBarState)}
     ) { paddingValues ->
         Box(
             modifier = modifier
@@ -151,36 +190,6 @@ fun YourAlarmScreen(
             when {
                 state.alarms.isEmpty() -> {
                     EmptyScreen()
-
-                    // For Testing Only. To Delete.
-//                    LazyColumn(
-//                        modifier = Modifier
-//                            .fillMaxSize()
-//                            .background(color = alarmBackground),
-//                        contentPadding = PaddingValues(16.dp),
-//                        verticalArrangement = Arrangement.spacedBy(12.dp)
-//                    ) {
-//                        // In a real app, this would be: items(alarms) { alarm -> AlarmCard(alarm) }
-//                        item { AlarmCard(alarms =
-//                            AlarmDetails(
-//                                time = LocalTime.of(10, 0),
-//                                alarmTitle = "Wake Up",
-//                                isEnabled = true,
-//                            )) }
-//                        item { AlarmCard(alarms =
-//                            AlarmDetails(
-//                                time = LocalTime.of(16, 0),
-//                                alarmTitle = "Education",
-//                                isEnabled = true,
-//                            )) }
-//                        item { AlarmCard(alarms =
-//                            AlarmDetails(
-//                                time = LocalTime.of(18, 0),
-//                                alarmTitle = "Dinner",
-//                                isEnabled = false,
-//                            )) }
-//
-//                    }
                 }
                 else -> {
                     // Best Practice: Use LazyColumn for lists
@@ -193,11 +202,9 @@ fun YourAlarmScreen(
                     ) {
                         // In a real app, this would be: items(alarms) { alarm -> AlarmCard(alarm) }
                         items(state.alarms) { alarm ->
-                            AlarmCard(alarms = alarm)
-//                    item { AlarmCard() }
-//                    item { AlarmCard() }
-//                    item { AlarmCard() }
-//                    item { AlarmCard() }
+                            AlarmCard(alarms = alarm, onAction = onAction, modifier = Modifier.clickable {
+                                onAction(YourAlarmsScreenAction.onAlarmClicked(alarm.id))
+                            })
                         }
                     }
                 }
@@ -235,7 +242,8 @@ private fun EmptyScreen(modifier: Modifier = Modifier) {
 @Composable
 private fun AlarmCard(
     modifier: Modifier = Modifier,
-    alarms: AlarmDetails
+    alarms: AlarmDetails,
+    onAction: (YourAlarmsScreenAction) -> Unit
 ) {
     Row(
         modifier = modifier
@@ -255,17 +263,22 @@ private fun AlarmCard(
         }
 
         // Rule: Switch should receive state from parent
-        AlarmOnOffButton(alarms = alarms)
+        AlarmOnOffButton(alarm = alarms, onAction = onAction)
     }
 }
 
 @Composable
-private fun AlarmOnOffButton(modifier: Modifier = Modifier, alarms: AlarmDetails) {
+private fun AlarmOnOffButton(
+    modifier: Modifier = Modifier,
+    alarm: AlarmDetails,
+    onAction: (YourAlarmsScreenAction) -> Unit) {
 
     Switch(
         modifier = modifier,
-        checked = alarms.isEnabled,
-        onCheckedChange = {},
+        checked = alarm.isEnabled,
+        onCheckedChange = {
+            onAction(YourAlarmsScreenAction.turnOnOrOffAlarm(alarm))
+        },
         colors = SwitchDefaults.colors(
             checkedThumbColor = cardBackground,
             checkedTrackColor = backgroundColor,
@@ -329,6 +342,9 @@ private fun AlarmCountdownDisplay(modifier: Modifier = Modifier, alarms: AlarmDe
 @Composable
 private fun YourAlarmScreenPreview() {
     SnoozelooTheme() {
-        YourAlarmScreenRoot()
+        YourAlarmScreenRoot(
+            onAddAlarmClicked = {},
+            onEditAlarmClicked = {}
+        )
     }
 }

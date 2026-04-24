@@ -7,7 +7,7 @@ interface AlarmRepository {
 
     fun getAllAlarmsStream(): Flow<List<AlarmDetails>>
 
-    fun getAlarmStream(id: Int): Flow<AlarmDetails?>
+    suspend fun getAlarmById(id: Int): AlarmDetails?
 
     suspend fun insertAlarm(alarm: AlarmDetails)
 
@@ -15,12 +15,14 @@ interface AlarmRepository {
 
     suspend fun updateAlarm(alarm: AlarmDetails)
 
+    suspend fun deleteAllAlarms()
+
     /*
     For testing purpose only. To be deleted.
      */
-    val alarmDao: AlarmDao
-    suspend fun clearAllAlarms() {
-        alarmDao.deleteAllAlarms()
-    }
+//    val alarmDao: AlarmDao
+//    suspend fun clearAllAlarms() {
+//        alarmDao.deleteAllAlarms()
+//    }
 
 }

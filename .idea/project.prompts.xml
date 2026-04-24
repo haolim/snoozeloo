@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="PromptTemplates">
+    <option name="prompts">
+      <list>
+        <PromptTemplate>
+          <option name="enabled" value="true" />
+          <option name="name" value="Unnamed" />
+          <option name="text" value="Act as a Senior Android Architect. I want you to perform a deep-code audit of my current project focusing on Snoozeloo.&#10;&#10;Task 1: Architecture &amp; Structure&#10;Evaluate my folder and file organization. Specifically, check if my implementation of Clean Architecture (Data, Domain, and UI layers) is strictly decoupled. Check if my MVVM/MVI pattern is correctly implemented, focusing on whether the View has leaked into the ViewModel or if the Repository is handling UI logic.&#10;&#10;Task 2: Code Quality &amp; Best Practices&#10;Scan my Kotlin code for 'code smells' or anti-patterns. Specifically look for:&#10;&#10;Correct usage of StateFlow and stateIn for reactive UI.&#10;&#10;Effective use of Coroutines and proper dispatchers.&#10;&#10;Manual Dependency Injection (AppViewModelProvider) setup efficiency.&#10;&#10;Boilerplate code that could be simplified using modern Kotlin features (e.g., UseCase invoke operators).&#10;&#10;Please provide a list of Critical Issues, Improvement Suggestions, and Positive Reinforcements for what I have done well." />
+        </PromptTemplate>
+      </list>
+    </option>
+  </component>
+</project>

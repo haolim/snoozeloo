@@ -13,3 +13,4 @@ data class AddEditAlarmUiState(
     val isSaveEnabled: Boolean
         get() = hourInput.toIntOrNull() != null && minuteInput.toIntOrNull() != null
 }
+
