@@ -8,4 +8,6 @@ sealed interface YourAlarmsScreenAction {
     data class onAlarmClicked(val id: Int): YourAlarmsScreenAction
 
     data object addAlarmClicked: YourAlarmsScreenAction
+
+    data class onDeleteConfirm(val id: Int): YourAlarmsScreenAction
 }

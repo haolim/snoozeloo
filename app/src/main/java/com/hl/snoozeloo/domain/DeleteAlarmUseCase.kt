@@ -5,8 +5,8 @@ import com.hl.snoozeloo.data.local.AlarmRepository
 /*
 Temporary UseCase for Testing Purpose Only
  */
-class DeleteAllAlarmsUseCase(
+class DeleteAlarmUseCase(
     private val repo: AlarmRepository
 ) {
-    suspend operator fun invoke() = repo.deleteAllAlarms()
+    suspend operator fun invoke(id: Int) = repo.deleteAlarmById(id)
 }

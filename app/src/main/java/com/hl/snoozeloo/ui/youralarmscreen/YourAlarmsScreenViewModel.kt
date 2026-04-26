@@ -2,11 +2,9 @@ package com.hl.snoozeloo.ui.youralarmscreen
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.hl.snoozeloo.data.local.AlarmRepository
-import com.hl.snoozeloo.domain.AlarmDetails
-import com.hl.snoozeloo.domain.DeleteAllAlarmsUseCase
+import com.hl.snoozeloo.domain.DeleteAlarmUseCase
 import com.hl.snoozeloo.domain.GetAllAlarmsUseCase
-import com.hl.snoozeloo.domain.UpdateAlarmUseCase
+import com.hl.snoozeloo.domain.SaveAlarmUseCase
 import com.hl.snoozeloo.ui.AlarmsUiEvents
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
@@ -22,8 +20,8 @@ import java.time.LocalTime
 
 class YourAlarmsScreenViewModel(
     private val getAllAlarmsUseCase: GetAllAlarmsUseCase,
-    private val deleteAllAlarmsUseCase: DeleteAllAlarmsUseCase, // Temporary for testing only. To delete.
-    private val updateAlarmUseCase: UpdateAlarmUseCase
+    private val deleteAlarmUseCase: DeleteAlarmUseCase, // Temporary for testing only. To delete.
+    private val saveAlarmUseCase: SaveAlarmUseCase,
 ) : ViewModel() {
 
     // Keep the time updated every 60 seconds
@@ -46,7 +44,6 @@ class YourAlarmsScreenViewModel(
 
     init {
         loadAlarms()
-        clearDatabase()
     }
     val uiState: StateFlow<YourAlarmUiState> = combine(
         getAllAlarmsUseCase(),
@@ -67,11 +64,6 @@ class YourAlarmsScreenViewModel(
         initialValue = YourAlarmUiState(isLoading = true)
     )
 
-    // Temporary for testing only. To delete.
-    private fun clearDatabase() {
-        deleteAllAlarmsUseCase
-    }
-    // --------------------------------------------
     fun onAction(action: YourAlarmsScreenAction) {
         when(action) {
             is YourAlarmsScreenAction.turnOnOrOffAlarm -> {
@@ -79,7 +71,7 @@ class YourAlarmsScreenViewModel(
                 val newAlarm = !currentAlarm.isEnabled
                 viewModelScope.launch {
                     try {
-                        updateAlarmUseCase(
+                        saveAlarmUseCase(
                             alarm = currentAlarm.copy(isEnabled = newAlarm)
                         )
                     } catch (e: Exception) {
@@ -95,10 +87,25 @@ class YourAlarmsScreenViewModel(
             is YourAlarmsScreenAction.addAlarmClicked -> {
 
             }
+
+            is YourAlarmsScreenAction.onDeleteConfirm -> {
+                deleteAlarm(action.id)
+            }
         }
     }
 
+    private fun deleteAlarm(id: Int) {
+        viewModelScope.launch {
+            try {
+                deleteAlarmUseCase(id)
+            } catch (e: Exception) {
+                uiState.value.copy(
+                    errorMessage = "Delete alarm failed."
+                )
+            }
+        }
 
+    }
 
     private fun loadAlarms() {
         viewModelScope.launch {
@@ -106,5 +113,7 @@ class YourAlarmsScreenViewModel(
                 _isLoading.value = false
         }
     }
+
+
 
 }

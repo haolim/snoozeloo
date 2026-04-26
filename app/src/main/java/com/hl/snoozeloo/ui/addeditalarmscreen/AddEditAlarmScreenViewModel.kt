@@ -1,24 +1,14 @@
 package com.hl.snoozeloo.ui.addeditalarmscreen
 
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.hl.snoozeloo.data.local.AlarmRepository
 import com.hl.snoozeloo.domain.AlarmDetails
-import com.hl.snoozeloo.domain.DeleteAllAlarmsUseCase
 import com.hl.snoozeloo.domain.GetAlarmByIdUseCase
 import com.hl.snoozeloo.domain.SaveAlarmUseCase
-import com.hl.snoozeloo.ui.youralarmscreen.YourAlarmUiState
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalTime
@@ -31,7 +21,6 @@ class AddEditAlarmScreenViewModel(
 ): ViewModel() {
 
     private val alarmId: Int? = savedStateHandle.get<Int>("alarmId")
-
     private val _uiState = MutableStateFlow(AddEditAlarmUiState())
     val uiState: StateFlow<AddEditAlarmUiState> = _uiState.asStateFlow()
 
@@ -48,9 +37,7 @@ class AddEditAlarmScreenViewModel(
                     hourInput = alarmDetails.time.hour.toString().padStart(2, '0'),
                     minuteInput = alarmDetails.time.minute.toString().padStart(2, '0'),
                     alarmDetails = alarmDetails
-                )
-
-                }
+                )}
             }
         }
     }
@@ -65,10 +52,10 @@ class AddEditAlarmScreenViewModel(
     fun onAction(action: AddEditAlarmScreenAction) {
         when (action) {
             is AddEditAlarmScreenAction.onHourChange -> {
-                updateTime(newHour = action.newHour)
+                updateTimeInput(newHour = action.newHour)
             }
             is AddEditAlarmScreenAction.onMinuteChange -> {
-                updateTime(newMinute = action.newMinute)
+                updateTimeInput(newMinute = action.newMinute)
             }
             is AddEditAlarmScreenAction.onSaveClick -> {
                 viewModelScope.launch {
@@ -78,27 +65,43 @@ class AddEditAlarmScreenViewModel(
         }
     }
 
-
-
-
-    private fun updateTime(
-        newHour: String? = null,
-        newMinute: String? = null
-    ) {
+    private fun updateTimeInput(newHour: String? = null, newMinute: String? = null) {
         _uiState.update { currentState ->
-            val h = newHour ?: currentState.hourInput
-            val m = newMinute ?: currentState.minuteInput
+            // 1. Determine which value is changing and sanitize it
+            val rawInput = newHour ?: newMinute ?: ""
+            val cleanInput = rawInput.filter { it.isDigit() }.takeLast(2)
+            val inputInt = cleanInput.toIntOrNull() ?: 0
 
-            // Try to sync LocalTime for the domain model
-            val updatedLocalTime = try {
-                LocalTime.of(h.toInt(), m.toInt())
-            } catch(e: Exception) {
-                currentState.alarmDetails.time // Keep old time if input is invalid/empty
+            // 2. Validate ranges based on what is being updated
+            val isHourValid = newHour == null || inputInt in 0..23
+            val isMinuteValid = newMinute == null || inputInt in 0..59
+
+            if (!isHourValid || !isMinuteValid) {
+                return@update currentState // Ignore invalid input
             }
+
+            // 3. Prepare the new strings for the UI
+            val nextHour = if (newHour != null) cleanInput else currentState.hourInput
+            val nextMinute = if (newMinute != null) cleanInput else currentState.minuteInput
+
+            // 4. Update the domain model (LocalTime)
+            // We use 0 as fallback for empty strings so LocalTime.of doesn't crash
+            val updatedLocalTime = try {
+                LocalTime.of(
+                    nextHour.ifEmpty { "0" }.toInt(),
+                    nextMinute.ifEmpty { "0" }.toInt()
+                )
+            } catch (e: Exception) {
+                currentState.alarmDetails.time
+            }
+
             currentState.copy(
-                hourInput = h,
-                minuteInput = m,
-                alarmDetails = currentState.alarmDetails.copy(time = updatedLocalTime),
+                hourInput = nextHour,
+                minuteInput = nextMinute,
+                alarmDetails = currentState.alarmDetails.copy(
+                    time = updatedLocalTime,
+                    alarmTitle = currentState.alarmDetails.alarmTitle
+                )
             )
         }
     }
@@ -106,10 +109,8 @@ class AddEditAlarmScreenViewModel(
     private suspend fun saveAlarm() {
         // Pull AlarmDetails from Domain Model out of the UI State
         // and send it to the Repository
-
-      //  if (_uiState.value.isSaving) return
-
         _uiState.update { it.copy(isSaving = true, errorMessage = null) }
+
         try {
             val alarmToSave = _uiState.value.alarmDetails
             saveAlarmUseCase(alarmToSave)
@@ -117,9 +118,5 @@ class AddEditAlarmScreenViewModel(
         } catch (e: Exception) {
             _uiState.update { it.copy(isSaving = false, errorMessage = "Error saving alarm. Try again.")}
         }
-//        finally {
-//            _uiState.update { it.copy(isSaving = false) }
-//        }
-
     }
 }

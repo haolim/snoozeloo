@@ -1,8 +1,11 @@
 package com.hl.snoozeloo.ui.addeditalarmscreen
 
 import android.R
+import android.R.attr.enabled
 import android.R.attr.height
 import android.R.attr.onClick
+import android.R.attr.singleLine
+import android.R.attr.textStyle
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,6 +24,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.input.InputTransformation.Companion.keyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
@@ -202,83 +206,42 @@ private fun HourAndMinuteRow(
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        HourCard(
+        AlarmTimeInputField(
             modifier = modifier.padding(16.dp),
             value = state.hourInput,
-            onValueChange = {newValue ->
+            onValueChange = { newValue ->
                 onAction(AddEditAlarmScreenAction.onHourChange(newValue))
-            }
+            },
+            label = "HH"
         )
         Text(
             text = ":",
             fontSize = 32.sp,
             fontWeight = FontWeight.SemiBold
         )
-        MinuteCard(
+        AlarmTimeInputField(
             modifier = modifier.padding(16.dp),
             value = state.minuteInput,
             onValueChange = {newValue ->
                 onAction(AddEditAlarmScreenAction.onMinuteChange(newValue))
-            }
+            },
+            label = "MM"
         )
     }
 }
-@Composable
-private fun HourCard(
-    modifier: Modifier = Modifier,
-    value: String,
-    onValueChange: (String) -> Unit
-) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = {input ->
-            // Only allow digits
-            val digitsOnly = input.filter {it.isDigit() }
-            // Limit to 2 characters
-            if (digitsOnly.length <= 2) {
-                // Validate range (0-23)
-                val intValue = digitsOnly.toIntOrNull()
-                if (intValue == null || intValue <= 23) {
-                    onValueChange(digitsOnly)
-                }
-            }
-        },
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-        label = { Text("Hour") },
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedContainerColor = alarmBackground,
-            unfocusedContainerColor = alarmBackground,
-            disabledContainerColor = alarmBackground,
-        ),
-        modifier = modifier.size(100.dp),
-        enabled = true,
-        singleLine = true,
-        textStyle = MaterialTheme.typography.displayMedium.copy(backgroundColor, textAlign = TextAlign.Center)
-    )
-}
 
 @Composable
-private fun MinuteCard(
+fun AlarmTimeInputField(
     modifier: Modifier = Modifier,
     value: String,
-     onValueChange: (String) -> Unit
+    onValueChange: (String) -> Unit,
+    label: String
 ) {
     OutlinedTextField(
         value = value,
-        onValueChange = {input ->
-            // Only allow digits
-            val digitsOnly = input.filter {it.isDigit() }
-            // Limit to 2 characters
-            if (digitsOnly.length <= 2) {
-                // Validate range (0-59)
-                val intValue = digitsOnly.toIntOrNull()
-                if (intValue == null || intValue <= 59) {
-                    onValueChange(digitsOnly)
-                }
-            }
-        },
+        onValueChange = onValueChange,
+        label = { Text(text = label) },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-        label = { Text("Minute") },
         colors = OutlinedTextFieldDefaults.colors(
             focusedContainerColor = alarmBackground,
             unfocusedContainerColor = alarmBackground,
@@ -287,7 +250,9 @@ private fun MinuteCard(
         modifier = modifier.size(100.dp),
         enabled = true,
         singleLine = true,
-        textStyle = MaterialTheme.typography.displayMedium.copy(backgroundColor, textAlign = TextAlign.Center)
+        textStyle = MaterialTheme.typography.displayMedium.copy(
+            backgroundColor,
+            textAlign = TextAlign.Center)
     )
 }
 

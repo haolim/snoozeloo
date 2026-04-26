@@ -21,19 +21,15 @@ class OfflineAlarmRepository(
     }
 
     override suspend fun insertAlarm(alarm: AlarmDetails) {
-        alarmDao.addAlarm(alarm.toEntity())
+        alarmDao.insertOrUpdateAlarm(alarm.toEntity())
     }
 
     override suspend fun deleteAlarm(alarm: AlarmDetails) {
         alarmDao.deleteAlarm(alarm.toEntity())
     }
 
-    override suspend fun updateAlarm(alarm: AlarmDetails) {
-        alarmDao.updateAlarm(alarm.toEntity())
-    }
-
-    override suspend fun deleteAllAlarms() {
-        alarmDao.deleteAllAlarms()
+    override suspend fun deleteAlarmById(id: Int) {
+        alarmDao.deleteAlarmById(id)
     }
 
 }
