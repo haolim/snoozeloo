@@ -13,9 +13,7 @@ interface AlarmRepository {
 
     suspend fun deleteAlarm(alarm: AlarmDetails)
 
-    suspend fun updateAlarm(alarm: AlarmDetails)
-
-    suspend fun deleteAllAlarms()
+    suspend fun deleteAlarmById(id: Int)
 
     /*
     For testing purpose only. To be deleted.

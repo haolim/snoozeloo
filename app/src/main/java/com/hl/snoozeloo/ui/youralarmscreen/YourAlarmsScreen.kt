@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -22,31 +23,50 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.BasicAlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FabPosition
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxDefaults
+import androidx.compose.material3.SwipeToDismissBoxState
+import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.hl.snoozeloo.ui.theme.SnoozelooTheme
 import com.hl.snoozeloo.ui.theme.alarmBackground
@@ -82,6 +102,7 @@ fun YourAlarmScreenRoot(
 
     val state by vm.uiState.collectAsStateWithLifecycle()
 
+
     // Channel - 4 - Listen to the event stream
     LaunchedEffect(Unit) {
         vm.eventFlow.collect { event ->
@@ -94,24 +115,7 @@ fun YourAlarmScreenRoot(
     }
 
     if (state.isLoading) {
-        //SplashScreenRoot()
-        YourAlarmScreen(
-            modifier = modifier,
-            snackBarState = snackBarState,
-            scope = scope,
-            state = state,
-            onAction = { action ->
-                when(action) {
-                    is YourAlarmsScreenAction.addAlarmClicked -> {
-                        onAddAlarmClicked()
-                    }
-                    is YourAlarmsScreenAction.onAlarmClicked -> {
-                        onEditAlarmClicked(action.id)
-                    }
-                    else -> vm.onAction(action)
-                }
-            }
-        )
+        SplashScreenRoot()
     } else {
         YourAlarmScreen(
             modifier = modifier,
@@ -142,6 +146,22 @@ fun YourAlarmScreen(
     state: YourAlarmUiState,
     onAction: (YourAlarmsScreenAction) -> Unit,
 ) {
+    var alarmToDelete by remember { mutableStateOf<AlarmDetails?>(null) }
+    if (alarmToDelete != null) {
+        StandardConfirmationDialog(
+            title = "Delete Alarm?",
+            message = "This cannot be undone.",
+            confirmText = "Delete",
+            onConfirm = {
+                onAction(YourAlarmsScreenAction.onDeleteConfirm(alarmToDelete!!.id))
+                alarmToDelete = null
+            },
+            onDismiss = { alarmToDelete = null }
+        )
+    }
+    val density = LocalDensity.current
+    val threshold = SwipeToDismissBoxDefaults.positionalThreshold
+
     Scaffold(
         modifier = modifier.padding(top = 16.dp),
         topBar = {
@@ -161,13 +181,6 @@ fun YourAlarmScreen(
                 onClick = {
                     onAction(YourAlarmsScreenAction.addAlarmClicked)
                 },
-//                    {
-//                    scope.launch {
-//                        snackBarState.showSnackbar(
-//                            message = "Clicked FAB"
-//                        )
-//                    }
-//                },
                 shape = CircleShape,
                 containerColor = backgroundColor,
                 contentColor = Color.White
@@ -201,19 +214,96 @@ fun YourAlarmScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         // In a real app, this would be: items(alarms) { alarm -> AlarmCard(alarm) }
-                        items(state.alarms) { alarm ->
-                            AlarmCard(alarms = alarm, onAction = onAction, modifier = Modifier.clickable {
-                                onAction(YourAlarmsScreenAction.onAlarmClicked(alarm.id))
-                            })
+                        items(state.alarms,
+                            key = { it.id }) { alarm ->
+
+                            //1. Manage the state of the swipe for this specific item
+                            val dismissState: SwipeToDismissBoxState = remember<SwipeToDismissBoxState> {
+                                SwipeToDismissBoxState(
+                                    initialValue = SwipeToDismissBoxValue.Settled,
+                                    density = density,
+                                    confirmValueChange = { value ->
+                                        if (value == SwipeToDismissBoxValue.EndToStart) {
+                                            // FIX 1: Set the state variable to trigger the dialog
+                                            alarmToDelete = alarm
+                                            false // Don't dismiss until confirmed
+                                        } else false
+                                    },
+                                    positionalThreshold = threshold
+                                    )
+                            }
+
+                            SwipeToDismissBox(
+                                state = dismissState,
+                                enableDismissFromStartToEnd = false,
+                                backgroundContent = {
+                                    // FIX 2: Consistently use SwipeToDismissBoxValue
+                                    val color = if (dismissState.targetValue == SwipeToDismissBoxValue.EndToStart) {
+                                        MaterialTheme.colorScheme.errorContainer
+                                    } else Color.Transparent
+
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .background(color)
+                                            .padding(horizontal = 20.dp),
+                                        contentAlignment = Alignment.CenterEnd
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Delete,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.onErrorContainer
+                                        )
+                                    }
+                                }
+                            ) {
+                                AlarmCard(
+                                    alarms = alarm,
+                                    onAction = onAction,
+                                    modifier = Modifier.clickable {
+                                        onAction(YourAlarmsScreenAction.onAlarmClicked(alarm.id))
+                                    }
+                                )
+                            }
                         }
                     }
                 }
             }
         }
     }
-
 }
-
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun StandardConfirmationDialog(
+    title: String,
+    message: String,
+    confirmText: String = "Confirm",
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    BasicAlertDialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(28.dp),
+            tonalElevation = 6.dp
+        ) {
+            Column(modifier = Modifier.padding(24.dp)) {
+                Text(text = title,
+                    //style = MaterialTheme.colorScheme.headlineSmall
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(text = message,
+                    //style = MaterialTheme.colorScheme.bodyMedium
+                )
+                Spacer(modifier = Modifier.height(24.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    TextButton(onClick = onDismiss) { Text("Cancel") }
+                    TextButton(onClick = onConfirm) { Text(confirmText) }
+                }
+            }
+        }
+    }
+}
 @Composable
 private fun EmptyScreen(modifier: Modifier = Modifier) {
     Box(

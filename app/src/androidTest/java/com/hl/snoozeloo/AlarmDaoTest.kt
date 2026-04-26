@@ -54,11 +54,11 @@ class AlarmDaoTest {
     )
 
     private suspend fun addOneAlarmToDb() {
-        alarmDao.addAlarm(alarm1)
+        alarmDao.insertOrUpdateAlarm(alarm1)
     }
     private suspend fun addTwoAlarmToDb() {
-        alarmDao.addAlarm(alarm1)
-        alarmDao.addAlarm(alarm2)
+        alarmDao.insertOrUpdateAlarm(alarm1)
+        alarmDao.insertOrUpdateAlarm(alarm2)
     }
 
     @Test
